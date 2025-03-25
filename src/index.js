@@ -105,7 +105,8 @@ app.delete("/api/pokemons/:id", (req, res) => {
   res.status(200).send({
     type: 'success',
     message: 'Pokemon deleted',
-    pokemon: pokemon
+    pokemon: pokemon,
+    newPokemonsList: newPokemonsList
   });
 });
 
