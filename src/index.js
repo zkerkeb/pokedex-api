@@ -5,9 +5,12 @@ import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import saveJson from "./utils/saveJson.js";
+import connectDB from "./config/connectdb.js";
+import Pokemon from "./schema/pokemon.js";
 
 dotenv.config();
 
+connectDB();
 // Lire le fichier JSON
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,104 +35,80 @@ app.use(express.json());
 app.use("/assets", express.static(path.join(__dirname, "../assets")));
 
 // Route GET de base
-app.get("/api/pokemons", (req, res) => {
-  res.status(200).send({
-    types: [
-      "fire",
-      "water",
-      "grass",
-      "electric",
-      "ice",
-      "fighting",
-      "poison",
-      "ground",
-      "flying",
-      "psychic",
-      "bug",
-      "rock",
-      "ghost",
-      "dragon",
-      "dark",
-      "steel",
-      "fairy",
-    ],
-    pokemons: pokemonsList,
-  });
+app.get("/api/pokemons", async (req, res) => {
+  const pokemons = await Pokemon.find();
+  res.status(200).send({ pokemons });
 });
 
-app.get("/api/pokemons/:id", (req, res) => {
-  const pokemon = pokemonsList.find(
-    (pokemon) => pokemon.id === parseInt(req.params.id)
-  );
+const pokemonNotFound = (res) => {
+  return res.status(404).send({
+    type: "error",
+    message: "Pokemon not found",
+  });
+};
 
-  if (!pokemon) {
-    return res.status(404).send({
+app.get("/api/pokemons/:id", async (req, res) => {
+  try {
+    const pokemon = await Pokemon.findById(req.params.id);
+    if (!pokemon) {
+      return pokemonNotFound(res);
+    }
+    return res.status(200).send(pokemon);
+  } catch (error) {
+    return pokemonNotFound(res);
+  }
+});
+
+app.post("/api/pokemons", async (req, res) => {
+  const newPokemon = req.body;
+  try {
+    const pokemon = await Pokemon.create(newPokemon);
+    res.status(201).send({
+      type: "success",
+      message: "Pokemon added",
+      pokemon: pokemon,
+    });
+  } catch (error) {
+    console.log("🚀 ~ app.post ~ error:", error)
+    res.status(400).send({
       type: "error",
-      message: "Pokemon not found",
+      validationErrors: error._message,
+      errors: error.errors,
+      apiError: error.errmsg ,
+      message: "Pokemon not added",
     });
   }
-  res.status(200).send(pokemon);
 });
 
-app.post("/api/pokemons", (req, res) => {
-  const newPokemon = req.body;
-  pokemonsList.push(newPokemon);
-  saveJson(pokemonsList, path.join(__dirname, "./data/pokemons.json"));
-
-  res.status(200).send({
-    type: "success",
-    message: "Pokemon added",
-    pokemon: newPokemon,
-  });
-});
-
-app.delete("/api/pokemons/:id", (req, res) => {
-  console.log(req.params.id);
-  const pokemon = pokemonsList.find(
-    (poke) => poke.id === parseInt(req.params.id)
-  );
-
-  if(!pokemon) {
-    return res.status(404).send({
-        type: 'error',
-        message: 'Pokemon not found'
-    })
-  }
-
-  const newPokemonsList = pokemonsList.filter(
-    (pokemon) => pokemon.id !== parseInt(req.params.id)
-  );
-
-  saveJson(newPokemonsList, path.join(__dirname, "./data/pokemons.json"));
-
-  res.status(200).send({
-    type: 'success',
-    message: 'Pokemon deleted',
-    pokemon: pokemon,
-    newPokemonsList: newPokemonsList
-  });
-});
-
-app.put('/api/pokemons/:id', (req, res) => {
-
-    const pokemon = pokemonsList.find(poke => poke.id === parseInt(req.params.id))
-    if(!pokemon) {
-        return res.status(404).send({
-            type: 'error',
-            message: 'Pokemon not found'
-        })
+app.delete("/api/pokemons/:id", async (req, res) => {
+  try {
+    const pokemon = await Pokemon.findByIdAndDelete(req.params.id);
+    if (!pokemon) {
+      return pokemonNotFound(res);
     }
-    const indexOfPokemon = pokemonsList.indexOf(pokemon)
-
-    pokemonsList.splice(indexOfPokemon,1, req.body)
-    saveJson(pokemonsList, path.join(__dirname, "./data/pokemons.json"));
     res.status(200).send({
-        type: 'success',
-        message: 'Pokemon updated',
-        // pokemon: pokemon
-    })
+      type: "success",
+      message: "Pokemon deleted",
+    });
+  } catch (error) {
+    return pokemonNotFound(res);
+  }
+});
 
-})
+app.put("/api/pokemons/:id", async (req, res) => {
+  try {
+    const pokemon = await Pokemon.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
+    return res.status(200).send({
+      type: "success",
+      message: "Pokemon updated",
+      pokemon: pokemon,
+    });
+  } catch (error) {
+    return pokemonNotFound(res);
+  }
+});
 
 app.get("/", (req, res) => {
   res.send("bienvenue sur l'API Pokémon");
