@@ -16,7 +16,7 @@ const app = express();
 const PORT = 3000;
 
 // Middleware pour CORS
-app.use(cors());
+app.use(cors())
 
 // Middleware pour parser le JSON
 app.use(express.json());
@@ -54,6 +54,86 @@ app.get("/api/pokemons", (req, res) => {
   });
 });
 
+const getPokemonById = (id) => {
+  return pokemonsList.find((pokemon) => {
+    return pokemon.id === parseInt(id)
+  })
+}
+
+const pokemonNotFound = (res) => {
+  return res.status(404).send({
+    message: "pokemon non trouvé",
+  });
+}
+
+const writePokemonsList = (newPokemonsList) => {
+  fs.writeFileSync(path.join(__dirname, './data/pokemons.json'), JSON.stringify(newPokemonsList, null, 2))
+}
+
+app.get("/api/pokemons/:id", (req, res) => {
+  const id = req.params.id;
+  console.log(id);
+  const pokemon = getPokemonById(id)
+
+  if (!pokemon) {
+    return pokemonNotFound(res)
+  }
+
+  return res.status(200).send({
+    pokemon,
+    message: "pokemon trouvé",
+  });
+});
+
+app.delete("/api/pokemons/:id", (req, res) => {
+  const id = req.params.id;
+  const pokemon = getPokemonById(id)
+  if (!pokemon) {
+      return pokemonNotFound(res)
+  }
+  const pokemonListWithoutSelectedPokemon = pokemonsList.filter((pokemon) => {
+    return pokemon.id !== parseInt(id)
+  })
+  writePokemonsList(pokemonListWithoutSelectedPokemon)
+
+  res.status(200).send({
+    message: "pokemon supprimé",
+  });
+})
+
+app.put("/api/pokemons/:id", (req, res) => {
+  const id = req.params.id;
+  console.log(req.params)
+  const pokemon = getPokemonById(id)
+  if (!pokemon) {
+    return pokemonNotFound(res)
+  }
+  const indexOfPokemon = pokemonsList.indexOf(pokemon)
+  
+  pokemonsList.splice(indexOfPokemon, 1, req.body)
+  
+  writePokemonsList(pokemonsList)
+
+  res.status(200).send({
+    pokemon: pokemonsList[indexOfPokemon],
+    message: "pokemon modifié",
+  });
+})
+
+app.post("/api/pokemons", (req, res) => {
+  const newPokemon = req.body
+  const pokemon = getPokemonById(newPokemon.id)
+  if (pokemon) {
+    return res.status(400).send({
+      message: "pokemon déjà existant",
+    });
+  }
+  pokemonsList.push(newPokemon)
+  writePokemonsList(pokemonsList)
+  res.status(201).send({
+    pokemon: newPokemon,
+  });
+})
 app.get("/", (req, res) => {
   res.send("bienvenue sur l'API Pokémon");
 });
