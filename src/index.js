@@ -5,6 +5,12 @@ import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
+import verifyToken from "./middlewares/verifytoken.js";
+import getPokemonById from "./utils/getPokemonById.js";
+import pokemonNotFound from "./utils/pokemonNotFound.js";
+import writePokemonsList from "./utils/writePokemonList.js";
+import {  postPokemons, getPokemons   } from "./controllers/pokemons.js";
+
 
 dotenv.config();
 
@@ -29,46 +35,12 @@ app.use(express.json());
 // 'path.join(__dirname, '../assets')' construit le chemin absolu vers le dossier 'assets'
 app.use("/assets", express.static(path.join(__dirname, "../assets")));
 
-const verifyToken = (req, res, next) => {
-  try {
-    const token = req.headers.authorization?.split(" ")[1];
-    console.log(token);
-    if (!token) {
-      return res.status(401).send({ message: "Unauthorized" });
-    }
-      jwt.verify(token, process.env.JWT_SECRET)
-      next();
-    } catch (error) {
-      return res.status(401).send({ message: "Unauthorized" });
-    }
-}
+
 
 // Route GET de base
-app.get("/api/pokemons", verifyToken, (req, res) => {
+app.get("/api/pokemons", getPokemons)
  
-  res.status(200).send({
-    types: [
-      "fire",
-      "water",
-      "grass",
-      "electric",
-      "ice",
-      "fighting",
-      "poison",
-      "ground",
-      "flying",
-      "psychic",
-      "bug",
-      "rock",
-      "ghost",
-      "dragon",
-      "dark",
-      "steel",
-      "fairy",
-    ],
-    pokemons: pokemonsList,
-  });
-});
+
 
 app.post("/api/login", (req, res) => {
   const { username, password } = req.body;
@@ -93,25 +65,9 @@ app.get("/me", (req, res) => {
   }
 });
 
-const getPokemonById = (id) => {
-  return pokemonsList.find((pokemon) => {
-    return pokemon.id === parseInt(id)
-  })
-}
-
-const pokemonNotFound = (res) => {
-  return res.status(404).send({
-    message: "pokemon non trouvé",
-  });
-}
-
-const writePokemonsList = (newPokemonsList) => {
-  fs.writeFileSync(path.join(__dirname, './data/pokemons.json'), JSON.stringify(newPokemonsList, null, 2))
-}
-
-app.get("/api/pokemons/:id", verifyToken, (req, res) => {
 
 
+app.get("/api/pokemons/:id", (req, res) => {
   const id = req.params.id;
   console.log(id);
   const pokemon = getPokemonById(id)
@@ -161,20 +117,9 @@ app.put("/api/pokemons/:id", (req, res) => {
   });
 })
 
-app.post("/api/pokemons", (req, res) => {
-  const newPokemon = req.body
-  const pokemon = getPokemonById(newPokemon.id)
-  if (pokemon) {
-    return res.status(400).send({
-      message: "pokemon déjà existant",
-    });
-  }
-  pokemonsList.push(newPokemon)
-  writePokemonsList(pokemonsList)
-  res.status(201).send({
-    pokemon: newPokemon,
-  });
-})
+app.post("/api/pokemons", postPokemons)
+
+
 app.get("/", (req, res) => {
   res.send("bienvenue sur l'API Pokémon");
 });
