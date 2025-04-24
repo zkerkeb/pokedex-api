@@ -29,8 +29,23 @@ app.use(express.json());
 // 'path.join(__dirname, '../assets')' construit le chemin absolu vers le dossier 'assets'
 app.use("/assets", express.static(path.join(__dirname, "../assets")));
 
+const verifyToken = (req, res, next) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    console.log(token);
+    if (!token) {
+      return res.status(401).send({ message: "Unauthorized" });
+    }
+      jwt.verify(token, process.env.JWT_SECRET)
+      next();
+    } catch (error) {
+      return res.status(401).send({ message: "Unauthorized" });
+    }
+}
+
 // Route GET de base
-app.get("/api/pokemons", (req, res) => {
+app.get("/api/pokemons", verifyToken, (req, res) => {
+ 
   res.status(200).send({
     types: [
       "fire",
@@ -94,7 +109,9 @@ const writePokemonsList = (newPokemonsList) => {
   fs.writeFileSync(path.join(__dirname, './data/pokemons.json'), JSON.stringify(newPokemonsList, null, 2))
 }
 
-app.get("/api/pokemons/:id", (req, res) => {
+app.get("/api/pokemons/:id", verifyToken, (req, res) => {
+
+
   const id = req.params.id;
   console.log(id);
   const pokemon = getPokemonById(id)
