@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
+import jwt from "jsonwebtoken";
 
 dotenv.config();
 
@@ -52,6 +53,29 @@ app.get("/api/pokemons", (req, res) => {
     ],
     pokemons: pokemonsList,
   });
+});
+
+app.post("/api/login", (req, res) => {
+  const { username, password } = req.body;
+  if (username === "admin" && password === "admin") {
+    const token = jwt.sign({ username }, process.env.JWT_SECRET);
+    res.status(200).send({ token });
+  } else {
+    res.status(401).send({ message: "Invalid credentials" });
+  }
+});
+
+app.get("/me", (req, res) => {
+  try{
+  const token = req.headers.authorization.split(" ")[1];
+  if (!token) {
+    return res.status(401).send({ message: "Unauthorized" });
+  }
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  res.status(200).send({ username: decoded.username });
+  } catch (error) {
+    res.status(401).send({ message: "Unauthorized" });
+  }
 });
 
 const getPokemonById = (id) => {
