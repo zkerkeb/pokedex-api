@@ -9,10 +9,17 @@ import verifyToken from "./middlewares/verifytoken.js";
 import getPokemonById from "./utils/getPokemonById.js";
 import pokemonNotFound from "./utils/pokemonNotFound.js";
 import writePokemonsList from "./utils/writePokemonList.js";
-import {  postPokemons, getPokemons   } from "./controllers/pokemons.js";
-
+import {  postPokemons, getPokemons,getPokemonByIdController, deletePokemonByIdController, updatePokemonByIdController   } from "./controllers/pokemons.js";
+import mongoose from "mongoose";
+import PokemonSchema from "./schema/pokemon.js";
 
 dotenv.config();
+
+mongoose.connect('mongodb://localhost:27017/pokemon-db').then(() => {
+  console.log("Connected to MongoDB");
+}).catch((err) => {
+  console.log("Error connecting to MongoDB", err);
+});
 
 // Lire le fichier JSON
 const __filename = fileURLToPath(import.meta.url);
@@ -38,7 +45,7 @@ app.use("/assets", express.static(path.join(__dirname, "../assets")));
 
 
 // Route GET de base
-app.get("/api/pokemons", getPokemons)
+app.get("/api/pokemons", verifyToken, getPokemons)
  
 
 
@@ -67,55 +74,11 @@ app.get("/me", (req, res) => {
 
 
 
-app.get("/api/pokemons/:id", (req, res) => {
-  const id = req.params.id;
-  console.log(id);
-  const pokemon = getPokemonById(id)
+app.get("/api/pokemons/:id", getPokemonByIdController);
 
-  if (!pokemon) {
-    return pokemonNotFound(res)
-  }
+app.delete("/api/pokemons/:id", deletePokemonByIdController)
 
-  return res.status(200).send({
-    pokemon,
-    message: "pokemon trouvé",
-  });
-});
-
-app.delete("/api/pokemons/:id", (req, res) => {
-  const id = req.params.id;
-  const pokemon = getPokemonById(id)
-  if (!pokemon) {
-      return pokemonNotFound(res)
-  }
-  const pokemonListWithoutSelectedPokemon = pokemonsList.filter((pokemon) => {
-    return pokemon.id !== parseInt(id)
-  })
-  writePokemonsList(pokemonListWithoutSelectedPokemon)
-
-  res.status(200).send({
-    message: "pokemon supprimé",
-  });
-})
-
-app.put("/api/pokemons/:id", (req, res) => {
-  const id = req.params.id;
-  console.log(req.params)
-  const pokemon = getPokemonById(id)
-  if (!pokemon) {
-    return pokemonNotFound(res)
-  }
-  const indexOfPokemon = pokemonsList.indexOf(pokemon)
-  
-  pokemonsList.splice(indexOfPokemon, 1, req.body)
-  
-  writePokemonsList(pokemonsList)
-
-  res.status(200).send({
-    pokemon: pokemonsList[indexOfPokemon],
-    message: "pokemon modifié",
-  });
-})
+app.put("/api/pokemons/:id", updatePokemonByIdController)
 
 app.post("/api/pokemons", postPokemons)
 
