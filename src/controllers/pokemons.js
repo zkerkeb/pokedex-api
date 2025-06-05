@@ -5,6 +5,7 @@ import path from "path";
 import { fileURLToPath } from 'url';
 import PokemonSchema from "../schema/pokemon.js";
 
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -30,19 +31,23 @@ const pokemonsList = JSON.parse(fs.readFileSync(path.join(__dirname, '../data/po
 }
 
  export const getPokemons = async (req, res) =>{
-    const {search} = req.query
+    const {search, limit = 10, offset = 0} = req.query
     let pokemons;
     if (search) {
         pokemons = await PokemonSchema.find({
+            
             $or: [
                 { "name.english": { $regex: search, $options: 'i' } },
                 { "name.french": { $regex: search, $options: 'i' } }
             ]
-        });
+        }).skip(Number(offset))
+        .limit(Number(limit))
     } else {
-        pokemons = await PokemonSchema.find()
+        pokemons = await PokemonSchema.find({})
+            .skip(Number(offset))
+            .limit(Number(limit));
     }
-    
+    console.log(pokemons)
     res.status(200).send({
         types: [
           "fire",

@@ -9,9 +9,10 @@ import verifyToken from "./middlewares/verifytoken.js";
 import getPokemonById from "./utils/getPokemonById.js";
 import pokemonNotFound from "./utils/pokemonNotFound.js";
 import writePokemonsList from "./utils/writePokemonList.js";
-import {  postPokemons, getPokemons,getPokemonByIdController, deletePokemonByIdController, updatePokemonByIdController   } from "./controllers/pokemons.js";
+import { postPokemons, getPokemons, getPokemonByIdController, deletePokemonByIdController, updatePokemonByIdController } from "./controllers/pokemons.js";
 import mongoose from "mongoose";
 import PokemonSchema from "./schema/pokemon.js";
+import rateLimiter from "./middlewares/rate-limiter.js";
 
 dotenv.config();
 
@@ -45,8 +46,8 @@ app.use("/assets", express.static(path.join(__dirname, "../assets")));
 
 
 // Route GET de base
-app.get("/api/pokemons", verifyToken, getPokemons)
- 
+app.get("/api/pokemons",  getPokemons)
+
 
 
 app.post("/api/login", (req, res) => {
@@ -60,13 +61,13 @@ app.post("/api/login", (req, res) => {
 });
 
 app.get("/me", (req, res) => {
-  try{
-  const token = req.headers.authorization.split(" ")[1];
-  if (!token) {
-    return res.status(401).send({ message: "Unauthorized" });
-  }
-  const decoded = jwt.verify(token, process.env.JWT_SECRET);
-  res.status(200).send({ username: decoded.username });
+  try {
+    const token = req.headers.authorization.split(" ")[1];
+    if (!token) {
+      return res.status(401).send({ message: "Unauthorized" });
+    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    res.status(200).send({ username: decoded.username });
   } catch (error) {
     res.status(401).send({ message: "Unauthorized" });
   }
